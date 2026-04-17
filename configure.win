@@ -25,7 +25,7 @@ OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
 OPENFHE_INCDIR="${OPENFHE_INSTALL_DIR}/include/openfhe"
 
 OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
-OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore -lpthread"
+OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore -lgomp -lpthread"
 
 sed -e "s|@cflags@|${OPENFHE_CFLAGS}|" \
     -e "s|@libs@|${OPENFHE_LIBS}|" \

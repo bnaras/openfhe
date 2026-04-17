@@ -43,3 +43,7 @@
 ^\.github$
 ^README\.Rmd$
 ^README\.html$
+# ── Dev-only: local-path scripts, misc, data-raw ──
+^inst/scripts$
+^inst/misc$
+^data-raw$
