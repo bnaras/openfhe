@@ -17,8 +17,19 @@ R_OPENFHE_PKG_HOME=`pwd`
 echo "* Building OpenFHE from vendored sources (Windows)..."
 
 # Pass R's OpenMP flag to the build script so OpenFHE's own static libs
-# use the same OpenMP ABI as the final R wrapper link.
-OPENFHE_OMP_CXXFLAGS=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null`
+# use the same OpenMP ABI as the final R wrapper link.  rtools45's R
+# CMD config does NOT expose SHLIB_OPENMP_CXXFLAGS (the variable is in
+# Makeconf but outside R CMD config's whitelist — it prints an error to
+# stdout and exits 1). Use exit status, not the captured text, to decide
+# whether to trust the output.  Empty is a valid answer: OpenFHE's own
+# CMake find_package(OpenMP) will still detect -fopenmp on its own, and
+# the final R wrapper link picks up $(SHLIB_OPENMP_CXXFLAGS) as a
+# make-variable reference in Makevars.win.
+if _omp=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null`; then
+    OPENFHE_OMP_CXXFLAGS="${_omp}"
+else
+    OPENFHE_OMP_CXXFLAGS=""
+fi
 export OPENFHE_OMP_CXXFLAGS
 
 # Build via cmake (Rtools provides cmake and make)

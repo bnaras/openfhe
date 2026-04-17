@@ -54,8 +54,17 @@ CXX17PICFLAGS=`"${R_HOME}/bin/R" CMD config CXX17PICFLAGS`
 # parent configure script (which ran the full three-strategy detection).
 # If this script is run standalone (no configure), fall back to whatever
 # R's Makeconf advertises — empty is a valid answer.
+#
+# Note: some R builds (notably rtools45 on Windows, and macOS CRAN R)
+# omit SHLIB_OPENMP_CXXFLAGS from `R CMD config`'s whitelist. Those
+# configurations print "ERROR: no information for variable ..." to
+# stdout and exit 1. Use exit status, not the captured text, to decide.
 if [ -z "${OPENFHE_OMP_CXXFLAGS+x}" ]; then
-    OPENFHE_OMP_CXXFLAGS=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null`
+    if _omp=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null`; then
+        OPENFHE_OMP_CXXFLAGS="${_omp}"
+    else
+        OPENFHE_OMP_CXXFLAGS=""
+    fi
 fi
 
 export CC=`"${R_HOME}/bin/R" CMD config CC`
