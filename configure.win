@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Build OpenFHE from vendored source on Windows (Rtools)
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+    echo "ERROR: R_HOME could not be found!"
+    exit 1
+fi
+
+R_OPENFHE_PKG_HOME=`pwd`
+
+echo "* Building OpenFHE from vendored sources (Windows)..."
+
+# Build via cmake (Rtools provides cmake and make)
+bash inst/build_openfhe.sh || { echo "OpenFHE build failed!"; exit 1; }
+cd ${R_OPENFHE_PKG_HOME}
+
+# After build, remove source tree if installing from tarball
+if test -d inst/doc; then
+    rm -rf inst/openfhe
+fi
+
+OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
+OPENFHE_INCDIR="${OPENFHE_INSTALL_DIR}/include/openfhe"
+
+OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
+OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore -lpthread"
+
+sed -e "s|@cflags@|${OPENFHE_CFLAGS}|" \
+    -e "s|@libs@|${OPENFHE_LIBS}|" \
+    src/Makevars.in > src/Makevars.win
+
+echo "* Wrote src/Makevars.win"
+echo "  PKG_CPPFLAGS=${OPENFHE_CFLAGS}"
+echo "  PKG_LIBS=${OPENFHE_LIBS}"

@@ -1,0 +1,67 @@
+Package: openfhe
+Title: R Interface to the OpenFHE Fully Homomorphic Encryption Library
+Version: 1.1.5-1
+Authors@R: c(
+    person("Balasubramanian", "Narasimhan", email = "naras@stanford.edu",
+           role = c("aut", "cre"), comment = c(ORCID = "0000-0001-5852-7639"))
+  )
+Description: Provides an R interface to the OpenFHE C++ library for fully
+    homomorphic encryption (FHE). Supports BFV, BGV, and CKKS schemes for
+    computation on encrypted data, as well as FHEW/TFHE for Boolean circuit
+    evaluation. Designed as a production-grade upgrade path from the
+    'homomorpheR' package.
+License: BSD_2_clause + file LICENSE
+URL: https://bnaras.github.io/openfhe, https://github.com/bnaras/fhe
+BugReports: https://github.com/bnaras/fhe/issues
+Depends:
+    R (>= 4.3.0)
+Imports:
+    S7,
+    cli,
+    methods
+Suggests:
+    tinytest,
+    gmp,
+    Rmpfr,
+    survival,
+    CVXR,
+    ggplot2,
+    jsonlite
+LinkingTo:
+    cpp11 (>= 0.4.2)
+SystemRequirements: cmake (>= 3.16), GNU make, C++17
+Collate:
+    'openfhe-package.R'
+    'cpp11.R'
+    'openfhe-object.R'
+    'enums.R'
+    'generics.R'
+    'element-params.R'
+    'crypto-parameters.R'
+    'encoding-params.R'
+    'params.R'
+    'params-getters.R'
+    'context.R'
+    'cryptocontext-getters.R'
+    'keys.R'
+    'plaintext.R'
+    'plaintext-accessors.R'
+    'ciphertext.R'
+    'ciphertext-accessors.R'
+    'methods-encrypt.R'
+    'methods-eval.R'
+    'methods-eval-9111.R'
+    'methods-ckks.R'
+    'multiparty.R'
+    'eval-key-map.R'
+    'secret-sharing.R'
+    'interactive-bootstrap.R'
+    'binfhe.R'
+    'serialization.R'
+    'operators.R'
+    'tolerance.R'
+    'utils.R'
+    'zzz.R'
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3

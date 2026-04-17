@@ -1,0 +1,119 @@
+#!/usr/bin/env sh
+
+# Find or build OpenFHE and write src/Makevars
+#
+# Strategy:
+#   1. OPENFHE_HOME env var  → use pre-installed shared libraries
+#   2. Vendored source       → build static libraries via cmake
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+    echo "ERROR: R_HOME could not be found!"
+    exit 1
+fi
+
+# ── Helper ──────────────────────────────────────────────
+check_openfhe_header() {
+  test -f "$1/include/openfhe/pke/openfhe.h"
+}
+
+USE_SYSTEM=""
+OPENFHE_CFLAGS=""
+OPENFHE_LIBS=""
+
+# ── Strategy 1: OPENFHE_HOME (pre-installed, for local dev) ──
+if [ -n "${OPENFHE_HOME}" ] && check_openfhe_header "${OPENFHE_HOME}"; then
+    echo "* Found pre-installed OpenFHE via OPENFHE_HOME: ${OPENFHE_HOME}"
+    USE_SYSTEM=yes
+    OPENFHE_INCDIR="${OPENFHE_HOME}/include/openfhe"
+    OPENFHE_LIBDIR="${OPENFHE_HOME}/lib"
+    OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
+    OPENFHE_LIBS="-L${OPENFHE_LIBDIR} -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore -Wl,-rpath,${OPENFHE_LIBDIR}"
+fi
+
+# ── Strategy 2: Build from vendored source ────────────────
+if [ -z "${USE_SYSTEM}" ]; then
+    echo "* Building OpenFHE from vendored sources..."
+
+    R_OPENFHE_PKG_HOME=`pwd`
+
+    # ── macOS: detect R's libomp ──────────────────────────
+    if [ "$(uname -s)" = "Darwin" ]; then
+        OPENMP_LIB_DIR=""
+        OPENMP_INC_DIR=""
+
+        # Probe known libomp locations (R framework, Homebrew ARM, Homebrew Intel)
+        R_LIB_DIR=$("${R_HOME}/bin/R" --vanilla -s -e 'cat(R.home("lib"))' 2>/dev/null)
+        for d in \
+            "${R_LIB_DIR}" \
+            "/opt/homebrew/opt/libomp/lib" \
+            "/usr/local/opt/libomp/lib" \
+            "/opt/R/arm64/lib"; do
+            if [ -f "$d/libomp.dylib" ]; then
+                OPENMP_LIB_DIR="$d"
+                break
+            fi
+        done
+
+        for d in \
+            "/opt/homebrew/opt/libomp/include" \
+            "/usr/local/opt/libomp/include" \
+            "/opt/R/arm64/include"; do
+            if [ -f "$d/omp.h" ]; then
+                OPENMP_INC_DIR="$d"
+                break
+            fi
+        done
+
+        if [ -n "${OPENMP_LIB_DIR}" ] && [ -n "${OPENMP_INC_DIR}" ]; then
+            echo "* Found libomp: lib=${OPENMP_LIB_DIR} inc=${OPENMP_INC_DIR}"
+            export OPENMP_LIB_DIR
+            export OPENMP_INC_DIR
+        else
+            echo "* libomp not found; OpenFHE will build without OpenMP"
+        fi
+    fi
+
+    # Build via cmake
+    bash inst/build_openfhe.sh || { echo "OpenFHE build failed!"; exit 1; }
+    cd ${R_OPENFHE_PKG_HOME}
+
+    # After build, remove source tree if installing from tarball
+    # (pre-built vignettes in inst/doc/ indicate tarball install)
+    if test -d inst/doc; then
+        rm -rf inst/openfhe
+    fi
+
+    OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
+    OPENFHE_INCDIR="${OPENFHE_INSTALL_DIR}/include/openfhe"
+
+    OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
+    OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore"
+
+    # Platform-specific link flags
+    if [ "$(uname -s)" = "Linux" ]; then
+        OPENFHE_LIBS="${OPENFHE_LIBS} -lpthread -ldl"
+    fi
+
+    if [ "$(uname -s)" = "Darwin" ] && [ -n "${OPENMP_LIB_DIR}" ]; then
+        OPENFHE_LIBS="${OPENFHE_LIBS} -L${OPENMP_LIB_DIR} -lomp"
+    fi
+fi
+
+# ── Failure ────────────────────────────────────────────
+if [ -z "${OPENFHE_CFLAGS}" ]; then
+    echo "ERROR: OpenFHE could not be found or built."
+    echo ""
+    echo "Ensure cmake (>= 3.16) is installed, or set OPENFHE_HOME"
+    echo "to a pre-installed OpenFHE prefix."
+    exit 1
+fi
+
+# ── Write Makevars ─────────────────────────────────────
+sed -e "s|@cflags@|${OPENFHE_CFLAGS}|" \
+    -e "s|@libs@|${OPENFHE_LIBS}|" \
+    src/Makevars.in > src/Makevars
+
+echo "* Wrote src/Makevars"
+echo "  PKG_CPPFLAGS=${OPENFHE_CFLAGS}"
+echo "  PKG_LIBS=${OPENFHE_LIBS}"

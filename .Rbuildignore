@@ -1,0 +1,45 @@
+^\.Rproj\.user$
+^.*\.Rproj$
+^CLAUDE\.md$
+^\.claude$
+# ── Git/CI metadata in submodule ──
+^inst/openfhe/\.git
+^inst/openfhe/\.github$
+^inst/openfhe/\.gitlab
+# ── CMake build artifacts (created at install time, never shipped) ──
+^inst/openfhe/build
+^src/openfhelib
+# ── OpenFHE directories not needed for library build ──
+^inst/openfhe/benchmark$
+^inst/openfhe/cicd$
+^inst/openfhe/demoData$
+^inst/openfhe/docker$
+^inst/openfhe/docs$
+^inst/openfhe/scripts$
+^inst/openfhe/test$
+# ── Per-component unittest/examples/extras (guarded by BUILD_ flags) ──
+^inst/openfhe/src/core/examples$
+^inst/openfhe/src/core/extras$
+^inst/openfhe/src/core/unittest$
+^inst/openfhe/src/pke/examples$
+^inst/openfhe/src/pke/extras$
+^inst/openfhe/src/pke/unittest$
+^inst/openfhe/src/binfhe/examples$
+^inst/openfhe/src/binfhe/unittest$
+# ── Third-party libraries not needed (test/benchmark frameworks) ──
+^inst/openfhe/third-party/google-benchmark$
+^inst/openfhe/third-party/google-test$
+^inst/openfhe/third-party/gperftools$
+# ── Non-source files ──
+^inst/openfhe/CMakePresets\.json$
+^inst/openfhe/README\.md$
+^inst/openfhe/CONTRIBUTING\.md$
+^inst/openfhe/CHANGELOG\.md$
+^inst/openfhe/LICENSE$
+# ── pkgdown / docs / github ──
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
+^README\.Rmd$
+^README\.html$
