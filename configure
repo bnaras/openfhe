@@ -8,15 +8,25 @@
 #
 # OpenMP is detected separately, once, at configure time (not inside
 # src/Makevars). Pattern borrowed from R's data.table package; rationale
-# in Writing R Extensions §1.2.1.1.  The detection produces two values
-# that are substituted into src/Makevars.in:
+# in Writing R Extensions §1.2.1.1. The detection produces FOUR values:
 #
-#   OPENMP_CFLAGS  — flag(s) for the C++ compile line (e.g. -fopenmp)
-#   OPENMP_LIBS    — flag(s) for the link line  (e.g. -fopenmp, -lomp)
+#   OPENMP_CFLAGS  — R-side compile flags (e.g. -Xclang -fopenmp)
+#   OPENMP_LIBS    — R-side link flags    (e.g. -L... -lomp)
+#   OPENMP_LIB_DIR — directory containing libomp.dylib (macOS, for
+#                    OpenFHE's own CMake via r_pkg-branch patch)
+#   OPENMP_INC_DIR — directory containing omp.h (macOS, same)
 #
-# Either may be empty if no OpenMP path worked; the package still builds,
-# just single-threaded. On macOS we only use R's bundled libomp.dylib —
-# never a Homebrew copy — to avoid loading two libomp's in one process.
+# Any may be empty if no OpenMP path worked; the package still builds,
+# just single-threaded.
+#
+# On macOS the critical discipline is SINGLE-SOURCE: the libomp.dylib
+# the R `.so` links against at runtime must be the SAME libomp.dylib
+# the vendored OpenFHE static libs link against. Two different
+# libomp.dylibs loaded into one R process crash. Preference order:
+# (1) R-bundled ${R_HOME}/lib/libomp.dylib with an omp.h found via
+# clang's default search (SDK / resource dir), (2) Homebrew libomp
+# where both lib and header come from the same prefix. No hybrid
+# (R's lib with Homebrew's header, or vice versa).
 
 : ${R_HOME=`R RHOME`}
 if test -z "${R_HOME}"; then
@@ -32,6 +42,8 @@ check_openfhe_header() {
 # ── OpenMP detection (pattern from R data.table) ──────────────
 OPENMP_CFLAGS=""
 OPENMP_LIBS=""
+OPENMP_LIB_DIR=""
+OPENMP_INC_DIR=""
 
 detect_openmp () {
     TEST_DIR=${TMPDIR:-/tmp}
@@ -53,9 +65,8 @@ EOF
 
     # Strategy 1: R's own SHLIB_OPENMP_CXXFLAGS.
     # Typically "-fopenmp" on Linux and Windows-rtools; "no information
-    # for variable" (and exit status 1) on CRAN macOS, which is why we
-    # need strategy 2. R CMD config prints its error message to stdout,
-    # so we rely on the exit status — not the captured text — to decide.
+    # for variable" (and exit status 1) on CRAN macOS. R CMD config
+    # prints its error message to stdout, so we rely on exit status.
     if R_OMP=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null` \
             && [ -n "${R_OMP}" ]; then
         printf "* checking if SHLIB_OPENMP_CXXFLAGS='%s' compiles & links C++ ... " "${R_OMP}"
@@ -71,27 +82,65 @@ EOF
         fi
     fi
 
-    # Strategy 2 (macOS only): the R-on-Mac official OpenMP path
-    # documented at https://mac.r-project.org/openmp . Uses Apple clang's
-    # -Xclang -fopenmp plus -lomp, which at link time resolves against
-    # ${R_HOME}/lib/libomp.dylib via R CMD SHLIB's implicit library
-    # search path. No Homebrew libomp is considered, by design — this
-    # keeps a single libomp in the R process.
+    # macOS: unified single-source detection. The R `.so` and the vendored
+    # OpenFHE static libs MUST link the same libomp.dylib at runtime.
     if [ "$(uname -s)" = "Darwin" ]; then
-        printf "* checking if '-Xclang -fopenmp' + '-lomp' work on macOS ... "
-        if PKG_CPPFLAGS="-Xclang -fopenmp" PKG_LIBS="-lomp" \
-               "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
-            echo "yes"
-            OPENMP_CFLAGS="-Xclang -fopenmp"
-            OPENMP_LIBS="-lomp"
-            cleanup_test
-            return
-        else
-            echo "no"
+        R_LIB_DIR=$("${R_HOME}/bin/R" --vanilla -s -e 'cat(R.home("lib"))' 2>/dev/null)
+
+        # Strategy 2a: R-bundled libomp.dylib + omp.h from clang's default
+        # search (SDK / resource dir — NOT Homebrew). Test compiles without
+        # any explicit -I; -lomp resolves via R CMD SHLIB's implicit
+        # -L${R_HOME}/lib. Pass if R ships libomp AND clang finds omp.h
+        # on its own; otherwise fall through to Homebrew.
+        if [ -f "${R_LIB_DIR}/libomp.dylib" ]; then
+            printf "* checking R-bundled libomp at %s (no Homebrew) ... " "${R_LIB_DIR}"
+            if PKG_CPPFLAGS="-Xclang -fopenmp" PKG_LIBS="-lomp" \
+                   "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
+                echo "yes"
+                OPENMP_CFLAGS="-Xclang -fopenmp"
+                OPENMP_LIBS="-L${R_LIB_DIR} -lomp"
+                OPENMP_LIB_DIR="${R_LIB_DIR}"
+                OPENMP_INC_DIR=""
+                cleanup_test
+                return
+            else
+                echo "no (omp.h not on default include path)"
+            fi
         fi
+
+        # Strategy 2b: Homebrew libomp end-to-end. Single-source: both lib
+        # and header come from the SAME Homebrew prefix, so only Homebrew's
+        # libomp.dylib is involved. This is the data.table fallback.
+        if [ "$(uname -m)" = "arm64" ]; then
+            HOMEBREW_PREFIX=/opt/homebrew
+        else
+            HOMEBREW_PREFIX=/usr/local
+        fi
+        LIBOMP_PREFIX="${HOMEBREW_PREFIX}/opt/libomp"
+        if [ -f "${LIBOMP_PREFIX}/lib/libomp.dylib" ] \
+                && [ -f "${LIBOMP_PREFIX}/include/omp.h" ]; then
+            printf "* checking Homebrew libomp at %s (single-source) ... " "${LIBOMP_PREFIX}"
+            if PKG_CPPFLAGS="-Xclang -fopenmp -I${LIBOMP_PREFIX}/include" \
+               PKG_LIBS="-L${LIBOMP_PREFIX}/lib -lomp" \
+                   "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
+                echo "yes"
+                OPENMP_CFLAGS="-Xclang -fopenmp -I${LIBOMP_PREFIX}/include"
+                OPENMP_LIBS="-L${LIBOMP_PREFIX}/lib -lomp"
+                OPENMP_LIB_DIR="${LIBOMP_PREFIX}/lib"
+                OPENMP_INC_DIR="${LIBOMP_PREFIX}/include"
+                cleanup_test
+                return
+            else
+                echo "no"
+            fi
+        fi
+
+        cleanup_test
+        echo "*** OpenMP not available on macOS (neither R-bundled nor Homebrew libomp works); OpenFHE will build without parallelism."
+        return
     fi
 
-    # Strategy 3: plain -fopenmp on both sides (gcc-family fallback).
+    # Strategy 3 (non-Darwin): plain -fopenmp (gcc-family fallback).
     printf "* checking if plain '-fopenmp' works ... "
     if PKG_CPPFLAGS="-fopenmp" PKG_LIBS="-fopenmp" \
            "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
@@ -111,11 +160,15 @@ EOF
 detect_openmp
 echo "* OPENMP_CFLAGS='${OPENMP_CFLAGS}'"
 echo "* OPENMP_LIBS='${OPENMP_LIBS}'"
+echo "* OPENMP_LIB_DIR='${OPENMP_LIB_DIR}'"
+echo "* OPENMP_INC_DIR='${OPENMP_INC_DIR}'"
 
 # Export so inst/build_openfhe.sh uses the same flags for OpenFHE's own
 # static-lib compile/link, keeping the ABI consistent with the final DLL.
 export OPENFHE_OMP_CXXFLAGS="${OPENMP_CFLAGS}"
 export OPENFHE_OMP_LIBS="${OPENMP_LIBS}"
+export OPENMP_LIB_DIR
+export OPENMP_INC_DIR
 
 USE_SYSTEM=""
 OPENFHE_CFLAGS=""
@@ -137,46 +190,13 @@ if [ -z "${USE_SYSTEM}" ]; then
 
     R_OPENFHE_PKG_HOME=`pwd`
 
-    # ── macOS: locate R's libomp.dylib so OpenFHE's own CMake build
-    # (via the r_pkg-branch OPENMP_LIBRARIES/OPENMP_INCLUDES patch) uses
-    # the same libomp the R wrapper layer will link against. omp.h is not
-    # shipped in ${R_HOME}/include, so we probe standard header locations
-    # only to satisfy CMake's find_package — the library binding stays
-    # with R's copy. This path is unchanged from the previous release.
-    if [ "$(uname -s)" = "Darwin" ]; then
-        OPENMP_LIB_DIR=""
-        OPENMP_INC_DIR=""
-
-        R_LIB_DIR=$("${R_HOME}/bin/R" --vanilla -s -e 'cat(R.home("lib"))' 2>/dev/null)
-        for d in \
-            "${R_LIB_DIR}" \
-            "/opt/homebrew/opt/libomp/lib" \
-            "/usr/local/opt/libomp/lib" \
-            "/opt/R/arm64/lib"; do
-            if [ -f "$d/libomp.dylib" ]; then
-                OPENMP_LIB_DIR="$d"
-                break
-            fi
-        done
-
-        for d in \
-            "/opt/homebrew/opt/libomp/include" \
-            "/usr/local/opt/libomp/include" \
-            "/opt/R/arm64/include"; do
-            if [ -f "$d/omp.h" ]; then
-                OPENMP_INC_DIR="$d"
-                break
-            fi
-        done
-
-        if [ -n "${OPENMP_LIB_DIR}" ] && [ -n "${OPENMP_INC_DIR}" ]; then
-            echo "* Found libomp: lib=${OPENMP_LIB_DIR} inc=${OPENMP_INC_DIR}"
-            export OPENMP_LIB_DIR
-            export OPENMP_INC_DIR
-        else
-            echo "* libomp lib+header not both found; OpenFHE build may skip OpenMP"
-        fi
-    fi
+    # OPENMP_LIB_DIR / OPENMP_INC_DIR were decided by the unified
+    # detect_openmp above and exported — both are used by
+    # inst/build_openfhe.sh via the r_pkg-branch OPENMP_LIBRARIES /
+    # OPENMP_INCLUDES injection. When both are set they represent a
+    # single libomp source (R-bundled or Homebrew end-to-end); when
+    # empty, build_openfhe.sh disables OpenFHE's own OpenMP so the
+    # CMake auto-detection cannot fall back to Homebrew unexpectedly.
 
     # Build via cmake
     bash inst/build_openfhe.sh || { echo "OpenFHE build failed!"; exit 1; }

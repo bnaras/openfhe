@@ -117,12 +117,21 @@ COMMON_CMAKE_OPTS="
 if test "$(uname -s)" = "Darwin"; then
     CMAKE_PLATFORM_OPTS="-DCMAKE_HOST_APPLE:bool=ON"
 
-    # Use R's libomp to avoid dual-libomp crashes.
-    # The r_pkg branch patch allows passing OPENMP_LIBRARIES and
-    # OPENMP_INCLUDES to override Homebrew/MacPorts auto-detection.
+    # OPENMP_LIB_DIR / OPENMP_INC_DIR are set by the parent configure's
+    # unified OpenMP detection (R-first, Homebrew-last, single-source).
+    # The r_pkg-branch patch in CMakeLists.txt uses OPENMP_LIBRARIES and
+    # OPENMP_INCLUDES to override the default Homebrew/MacPorts guess.
     if test -n "${OPENMP_LIB_DIR}" && test -n "${OPENMP_INC_DIR}"; then
         echo "Using externally specified OpenMP: lib=${OPENMP_LIB_DIR} inc=${OPENMP_INC_DIR}"
         CMAKE_PLATFORM_OPTS="${CMAKE_PLATFORM_OPTS} -DOPENMP_LIBRARIES=${OPENMP_LIB_DIR} -DOPENMP_INCLUDES=${OPENMP_INC_DIR}"
+    else
+        # No single-source OpenMP available. Turn OpenFHE's OpenMP off
+        # rather than let upstream's CMake auto-detection fall back to
+        # /opt/homebrew/opt/libomp, which would be a different libomp
+        # than the one the R `.so` links (crash class: two libomps in
+        # one R process).
+        echo "No OpenMP source agreed upon; building OpenFHE with WITH_OPENMP=OFF"
+        CMAKE_PLATFORM_OPTS="${CMAKE_PLATFORM_OPTS} -DWITH_OPENMP:bool=OFF"
     fi
 else
     CMAKE_PLATFORM_OPTS="-G \"Unix Makefiles\""

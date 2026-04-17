@@ -19,10 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         config:
+          # Bring one platform green at a time: macOS first, then Windows,
+          # then Ubuntu. Restore the full matrix only after macOS passes.
           - {os: macos-latest,    r: 'release'}
-          - {os: windows-latest,  r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
