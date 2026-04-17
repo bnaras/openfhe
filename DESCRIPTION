@@ -10,7 +10,7 @@ Description: Provides an R interface to the OpenFHE C++ library for fully
     computation on encrypted data, as well as FHEW/TFHE for Boolean circuit
     evaluation. Designed as a production-grade upgrade path from the
     'homomorpheR' package.
-License: BSD_2_clause
+License: BSD_2_clause + file LICENSE
 URL: https://bnaras.github.io/openfhe, https://github.com/bnaras/fhe
 BugReports: https://github.com/bnaras/fhe/issues
 Depends:
