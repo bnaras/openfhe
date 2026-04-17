@@ -28,16 +28,40 @@ if test -z "${R_HOME}"; then
 fi
 
 #
-# Get compiler settings from R
+# Get compiler settings from R.
+#
+# Per Writing R Extensions §1.2.4, a package that sets CXX_STD = CXX17 (as
+# openfhe does) should use the CXX17* configuration variables rather than
+# the default CXX* ones when compiling sub-libraries, so the static OpenFHE
+# archives are built with the same toolchain and flags the R package layer
+# will use.
+#
+# Per §1.2.1.1, OpenMP linkage is conveyed by SHLIB_OPENMP_CXXFLAGS (R will
+# return an empty string on platforms without OpenMP support). We feed that
+# flag into the CMake compile/link lines so the static archives match the
+# final DLL's OpenMP ABI, instead of hardcoding -lgomp (explicitly forbidden
+# in §1.6.4).
 #
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
-CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS`
 LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 
+CXX17=`"${R_HOME}/bin/R" CMD config CXX17`
+CXX17STD=`"${R_HOME}/bin/R" CMD config CXX17STD`
+CXX17FLAGS=`"${R_HOME}/bin/R" CMD config CXX17FLAGS`
+CXX17PICFLAGS=`"${R_HOME}/bin/R" CMD config CXX17PICFLAGS`
+
+# OpenMP flag. Preferred source is OPENFHE_OMP_CXXFLAGS exported by the
+# parent configure script (which ran the full three-strategy detection).
+# If this script is run standalone (no configure), fall back to whatever
+# R's Makeconf advertises — empty is a valid answer.
+if [ -z "${OPENFHE_OMP_CXXFLAGS+x}" ]; then
+    OPENFHE_OMP_CXXFLAGS=`"${R_HOME}/bin/R" CMD config SHLIB_OPENMP_CXXFLAGS 2>/dev/null`
+fi
+
 export CC=`"${R_HOME}/bin/R" CMD config CC`
-export CXX=`"${R_HOME}/bin/R" CMD config CXX17`
+export CXX="${CXX17} ${CXX17STD}"
 export CFLAGS
-export CXXFLAGS
+export CXXFLAGS="${CXX17FLAGS} ${CXX17PICFLAGS} ${OPENFHE_OMP_CXXFLAGS}"
 export LDFLAGS
 
 R_OPENFHE_PKG_HOME=`pwd`
@@ -46,10 +70,12 @@ OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
 
 echo ""
 echo "CMAKE VERSION: '`${CMAKE_EXE} --version | head -n 1`'"
-echo "CC: '${CC}'"
-echo "CXX: '${CXX}'"
-echo "CFLAGS: '${CFLAGS}'"
+echo "CC:       '${CC}'"
+echo "CXX:      '${CXX}'"
+echo "CFLAGS:   '${CFLAGS}'"
 echo "CXXFLAGS: '${CXXFLAGS}'"
+echo "LDFLAGS:  '${LDFLAGS}'"
+echo "OPENFHE_OMP_CXXFLAGS:  '${OPENFHE_OMP_CXXFLAGS}'"
 echo ""
 
 #
@@ -151,6 +177,24 @@ else
     echo "ERROR: config_core.h not found in build directory!"
     exit 1
 fi
+
+#
+# CRAN portability patch: R CMD check flags `#pragma clang diagnostic`
+# directives as non-portable pragmas (Writing R Extensions §1.6.4 and the
+# QC.R pragma scan). Upstream OpenFHE's serial.h and serializable.h guard
+# these with `#elif defined __clang__`, which is semantically correct C++
+# but invisible to R's static text scanner. Strip the clang-pragma lines
+# from the installed headers; the `#elif` branches become empty (valid
+# preprocessor) and the shipped source is then CRAN-portable. GCC diagnostic
+# pragmas in these files remain — R's scanner accepts them as portable.
+#
+for hdr in "${INCDIR}/core/utils/serial.h" "${INCDIR}/core/utils/serializable.h"; do
+    if test -f "${hdr}"; then
+        sed -i.bak -e '/^[[:space:]]*#pragma[[:space:]][[:space:]]*clang[[:space:]][[:space:]]*diagnostic/d' "${hdr}"
+        rm -f "${hdr}.bak"
+        echo "   stripped clang pragmas from $(basename ${hdr})"
+    fi
+done
 
 echo ">>> OpenFHE installed to ${OPENFHE_INSTALL_DIR}"
 
