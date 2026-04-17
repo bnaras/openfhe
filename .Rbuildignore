@@ -51,3 +51,7 @@ inst/openfhe/third-party/\..+
 ^inst/scripts$
 ^inst/misc$
 ^data-raw$
+# ── Debug artifacts from local R CMD build / check ──
+^build-check\.log$
+^openfhe_.+\.tar\.gz$
+^openfhe\.Rcheck$

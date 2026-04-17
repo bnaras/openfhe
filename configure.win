@@ -36,14 +36,17 @@ export OPENFHE_OMP_CXXFLAGS
 bash inst/build_openfhe.sh || { echo "OpenFHE build failed!"; exit 1; }
 cd ${R_OPENFHE_PKG_HOME}
 
-# After build, remove source tree if installing from tarball
-# (pre-built vignettes in inst/doc/ indicate tarball install)
-if test -d inst/doc; then
-    rm -rf inst/openfhe
-fi
-
 OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
 OPENFHE_INCDIR="${OPENFHE_INSTALL_DIR}/include/openfhe"
+
+# Same discipline as configure: delete inst/openfhe ONLY when we are at
+# the end-user install from a built tarball (inst/doc present), never at
+# R CMD build's pre-install vignette-build step (inst/doc absent). See
+# the detailed comment in configure for the reasoning.
+if test -d inst/doc; then
+    echo "* Removing inst/openfhe/ (tarball install, inst/doc present)"
+    rm -rf inst/openfhe
+fi
 
 OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
 OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore"

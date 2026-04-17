@@ -1,0 +1,184 @@
+---
+title: "Introduction to openfhe: Fully Homomorphic Encryption in R"
+author: "Balasubramanian Narasimhan"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to openfhe: Fully Homomorphic Encryption in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## What is Fully Homomorphic Encryption?
+
+Fully Homomorphic Encryption (FHE) allows computation on encrypted
+data without decryption. A data holder can encrypt sensitive data,
+send it to an untrusted server for processing, and receive encrypted
+results — all without the server ever seeing the plaintext.
+
+The `openfhe` R package provides an interface to the
+[OpenFHE](https://github.com/openfheorg/openfhe-development) C++
+library, which implements the major FHE schemes:
+
+- **BFV/BGV**: Exact integer arithmetic
+- **CKKS**: Approximate real-number arithmetic
+- **FHEW/TFHE**: Boolean circuit evaluation
+
+## Quick Start: Integer Arithmetic (BFV)
+
+```{r bfv-basic}
+library(openfhe)
+
+# Create a context for BFV with 128-bit security
+cc <- fhe_context("BFV", plaintext_modulus = 65537, multiplicative_depth = 2)
+
+# Generate keys (including evaluation keys for multiplication)
+keys <- key_gen(cc, eval_mult = TRUE)
+
+# Encrypt integer vectors
+x <- c(1, 2, 3, 4, 5, 6, 7, 8)
+ct_x <- encrypt(keys@public, make_packed_plaintext(cc, x), cc = cc)
+
+y <- c(10, 20, 30, 40, 50, 60, 70, 80)
+ct_y <- encrypt(keys@public, make_packed_plaintext(cc, y), cc = cc)
+
+# Compute on encrypted data — the server never sees x or y
+ct_sum  <- ct_x + ct_y       # element-wise addition
+ct_prod <- ct_x * ct_y       # element-wise multiplication
+
+# Decrypt (only the key holder can do this)
+result_sum <- decrypt(ct_sum, keys@secret, cc = cc)
+set_length(result_sum, 8)
+get_packed_value(result_sum)
+# [1] 11 22 33 44 55 66 77 88  (exact!)
+```
+
+BFV gives **exact** results for integer arithmetic modulo the
+plaintext modulus. No approximation error.
+
+## Real-Number Arithmetic (CKKS)
+
+For computations involving real numbers (statistics, ML), CKKS
+provides approximate arithmetic:
+
+```{r ckks-basic}
+cc <- fhe_context("CKKS",
+  multiplicative_depth = 1,
+  scaling_mod_size = 50,
+  batch_size = 8
+)
+keys <- key_gen(cc, eval_mult = TRUE)
+
+# Encrypt real-valued vectors
+x <- c(0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0, 5.0)
+ct <- encrypt(keys@public, make_ckks_packed_plaintext(cc, x), cc = cc)
+
+# Homomorphic operations
+ct_doubled <- ct + ct
+ct_squared <- ct * ct
+ct_scaled  <- ct * 4.0
+
+# Decrypt
+result <- decrypt(ct_doubled, keys@secret, cc = cc)
+set_length(result, 8)
+get_real_packed_value(result)
+# [1] 0.5 1.0 1.5 2.0 4.0 6.0 8.0 10.0  (within ~1e-7 tolerance)
+```
+
+CKKS results are approximate — the precision depends on the scaling
+parameters. For most statistical applications, this is more than
+sufficient.
+
+## Boolean Circuits (Binary FHE)
+
+For logic operations on encrypted bits:
+
+```{r binfhe-basic}
+ctx <- bin_fhe_context(BinFHEParamSet$STD128, BinFHEMethod$GINX)
+sk <- bin_key_gen(ctx)
+bin_bt_key_gen(ctx, sk)
+
+# OpenFHE requires independent ciphertext copies for binary gates
+ct_and <- eval_bin_gate(ctx, BinGate$AND,
+  bin_encrypt(ctx, sk, 1L),
+  bin_encrypt(ctx, sk, 0L))
+bin_decrypt(ctx, sk, ct_and)  # 0 (FALSE)
+
+ct_or <- eval_bin_gate(ctx, BinGate$OR,
+  bin_encrypt(ctx, sk, 1L),
+  bin_encrypt(ctx, sk, 0L))
+bin_decrypt(ctx, sk, ct_or)   # 1 (TRUE)
+```
+
+## Serialization
+
+For distributed protocols, all objects can be serialized:
+
+```{r serial}
+tdir <- tempdir()
+# Save to files
+fhe_serialize(cc, file.path(tdir, "context.bin"))
+fhe_serialize(keys@public, file.path(tdir, "pubkey.bin"))
+fhe_serialize(ct, file.path(tdir, "ciphertext.bin"))
+serialize_eval_keys(file.path(tdir, "mult_keys.bin"), "mult")
+
+# Load (could be in another session)
+cc2 <- fhe_deserialize(file.path(tdir, "context.bin"), "CryptoContext")
+ct2 <- fhe_deserialize(file.path(tdir, "ciphertext.bin"), "Ciphertext")
+```
+
+## Threshold (Multi-Party) Decryption
+
+Multiple parties can jointly decrypt without any single party
+holding the complete secret key:
+
+```{r threshold}
+cc <- fhe_context("BFV",
+  plaintext_modulus = 65537,
+  multiplicative_depth = 2,
+  features = c(Feature$MULTIPARTY)
+)
+
+# Party A generates initial keys
+kp_a <- key_gen(cc)
+
+# Party B generates keys using A's public key
+kp_b <- multiparty_key_gen(cc, kp_a@public)
+
+# Encrypt with B's public key
+ct <- encrypt(kp_b@public, make_packed_plaintext(cc, 1:8), cc = cc)
+
+# Distributed decryption
+partial_a <- multiparty_decrypt_lead(cc, kp_a@secret, ct)
+partial_b <- multiparty_decrypt_main(cc, kp_b@secret, ct)
+result <- multiparty_decrypt_fusion(cc, partial_a, partial_b)
+```
+
+## Why openfhe?
+
+The `openfhe` package is the natural upgrade from
+[homomorpheR](https://github.com/bnaras/homomorpheR), which
+demonstrated privacy-preserving computation using Paillier encryption
+(additive homomorphism only). With `openfhe`, R users get:
+
+- **Full homomorphism**: both addition and multiplication on encrypted data
+- **Production performance**: backed by the optimized OpenFHE C++ library
+- **Multiple schemes**: choose the right tool (exact integers, approximate reals, Boolean logic)
+- **Threshold FHE**: distributed trust across multiple parties
+- **Serialization**: for federated analytics across institutions
+
+This opens the door to privacy-preserving medical statistics,
+federated learning, and secure multi-party computation — directly
+from R.
+
+## Further Reading
+
+- [OpenFHE documentation](https://openfhe-development.readthedocs.io/)
+- [homomorpheR](https://github.com/bnaras/homomorpheR) — predecessor package

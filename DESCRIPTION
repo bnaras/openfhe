@@ -1,6 +1,6 @@
 Package: openfhe
 Title: R Interface to the OpenFHE Fully Homomorphic Encryption Library
-Version: 1.1.5-1
+Version: 1.1.5-2
 Authors@R: c(
     person("Balasubramanian", "Narasimhan", email = "naras@stanford.edu",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0001-5852-7639"))
@@ -23,10 +23,13 @@ Suggests:
     tinytest,
     gmp,
     Rmpfr,
+    knitr,
+    rmarkdown,
     survival,
     CVXR,
     ggplot2,
     jsonlite
+VignetteBuilder: knitr
 LinkingTo:
     cpp11 (>= 0.4.2)
 SystemRequirements: cmake (>= 3.16), GNU make, C++17

@@ -87,30 +87,55 @@ EOF
     if [ "$(uname -s)" = "Darwin" ]; then
         R_LIB_DIR=$("${R_HOME}/bin/R" --vanilla -s -e 'cat(R.home("lib"))' 2>/dev/null)
 
-        # Strategy 2a: R-bundled libomp.dylib + omp.h from clang's default
-        # search (SDK / resource dir — NOT Homebrew). Test compiles without
-        # any explicit -I; -lomp resolves via R CMD SHLIB's implicit
-        # -L${R_HOME}/lib. Pass if R ships libomp AND clang finds omp.h
-        # on its own; otherwise fall through to Homebrew.
+        # Strategy 2a: R-bundled libomp.dylib + omp.h from a clang or Xcode
+        # location that is NOT Homebrew. Probe several candidate include
+        # directories in order; first one that succeeds wins and we stay
+        # entirely within the R + Apple-toolchain single source. This is the
+        # preferred strategy — it works on end-user macOS without Homebrew.
+        #
+        # Candidates:
+        #   ${R_HOME}/include                    (rare, but cheap to probe)
+        #   $(clang --print-resource-dir)/include
+        #   $(xcrun --show-sdk-path)/usr/lib/clang/<ver>/include
+        #   /Library/Developer/CommandLineTools/usr/lib/clang/*/include
+        #
+        # For each candidate, try compiling the test .cpp with explicit -I.
         if [ -f "${R_LIB_DIR}/libomp.dylib" ]; then
-            printf "* checking R-bundled libomp at %s (no Homebrew) ... " "${R_LIB_DIR}"
-            if PKG_CPPFLAGS="-Xclang -fopenmp" PKG_LIBS="-lomp" \
-                   "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
-                echo "yes"
-                OPENMP_CFLAGS="-Xclang -fopenmp"
-                OPENMP_LIBS="-L${R_LIB_DIR} -lomp"
-                OPENMP_LIB_DIR="${R_LIB_DIR}"
-                OPENMP_INC_DIR=""
-                cleanup_test
-                return
-            else
-                echo "no (omp.h not on default include path)"
+            CANDIDATES="${R_HOME}/include"
+            if _rd=`clang --print-resource-dir 2>/dev/null` && [ -n "${_rd}" ]; then
+                CANDIDATES="${CANDIDATES} ${_rd}/include"
             fi
+            if _sdk=`xcrun --show-sdk-path 2>/dev/null` && [ -n "${_sdk}" ]; then
+                for d in "${_sdk}"/usr/lib/clang/*/include; do
+                    [ -d "$d" ] && CANDIDATES="${CANDIDATES} $d"
+                done
+            fi
+            for d in /Library/Developer/CommandLineTools/usr/lib/clang/*/include; do
+                [ -d "$d" ] && CANDIDATES="${CANDIDATES} $d"
+            done
+
+            for _inc in ${CANDIDATES}; do
+                [ -f "${_inc}/omp.h" ] || continue
+                printf "* checking R-bundled libomp + omp.h at %s ... " "${_inc}"
+                if PKG_CPPFLAGS="-Xclang -fopenmp -I${_inc}" PKG_LIBS="-lomp" \
+                       "${R_HOME}/bin/R" CMD SHLIB "${TEST_SRC}" >> config.log 2>&1; then
+                    echo "yes"
+                    OPENMP_CFLAGS="-Xclang -fopenmp -I${_inc}"
+                    OPENMP_LIBS="-L${R_LIB_DIR} -lomp"
+                    OPENMP_LIB_DIR="${R_LIB_DIR}"
+                    OPENMP_INC_DIR="${_inc}"
+                    cleanup_test
+                    return
+                else
+                    echo "no"
+                fi
+            done
         fi
 
         # Strategy 2b: Homebrew libomp end-to-end. Single-source: both lib
         # and header come from the SAME Homebrew prefix, so only Homebrew's
-        # libomp.dylib is involved. This is the data.table fallback.
+        # libomp.dylib is involved. This is the data.table fallback. Used
+        # when Strategy 2a cannot locate an R / Apple-toolchain omp.h.
         if [ "$(uname -m)" = "arm64" ]; then
             HOMEBREW_PREFIX=/opt/homebrew
         else
@@ -136,7 +161,21 @@ EOF
         fi
 
         cleanup_test
-        echo "*** OpenMP not available on macOS (neither R-bundled nor Homebrew libomp works); OpenFHE will build without parallelism."
+        # Loud warning: falling through to no-OpenMP on macOS is a
+        # real performance regression (OpenFHE CKKS bootstrapping goes
+        # from parallel to serial). Emit a visible notice so anyone
+        # inspecting the install log sees it.
+        echo ""
+        echo "*************************************************************"
+        echo "*** WARNING: OpenMP not available on macOS.              ***"
+        echo "*** Neither R-bundled libomp + a locatable omp.h nor      ***"
+        echo "*** Homebrew libomp was usable. OpenFHE will build        ***"
+        echo "*** WITHOUT parallelism; CKKS bootstrapping and other     ***"
+        echo "*** hot paths will be significantly slower. To restore    ***"
+        echo "*** parallelism, install libomp via 'brew install libomp' ***"
+        echo "*** and re-run the package install.                       ***"
+        echo "*************************************************************"
+        echo ""
         return
     fi
 
@@ -202,14 +241,29 @@ if [ -z "${USE_SYSTEM}" ]; then
     bash inst/build_openfhe.sh || { echo "OpenFHE build failed!"; exit 1; }
     cd ${R_OPENFHE_PKG_HOME}
 
-    # After build, remove source tree if installing from tarball
-    # (pre-built vignettes in inst/doc/ indicate tarball install)
-    if test -d inst/doc; then
-        rm -rf inst/openfhe
-    fi
-
     OPENFHE_INSTALL_DIR=${R_OPENFHE_PKG_HOME}/src/openfhelib
     OPENFHE_INCDIR="${OPENFHE_INSTALL_DIR}/include/openfhe"
+
+    # Remove the vendored source tree now that static libs + headers are
+    # in src/openfhelib/ — but ONLY when we are at an end-user install from
+    # a built tarball. R CMD build also runs configure at its pre-install
+    # step (for vignette rebuilding), and if we delete inst/openfhe there
+    # the subsequent tarball will be missing the OpenFHE source and end-user
+    # installs will fail at CMake ("source directory does not contain
+    # CMakeLists.txt").
+    #
+    # `inst/doc/` as the discriminator: it is populated by R CMD build
+    # AFTER the pre-install vignette-build step finishes and is present in
+    # the final tarball, so it is absent at the pre-install step and
+    # present at the end-user install. This condition is what the package
+    # had before the 1.1.5-2 attempt at an artifact-presence guard; that
+    # attempt broke the R-CMD-build flow for tarballs that carry vignettes.
+    # Precondition for this guard to fire correctly: at least one vignette
+    # is shipped so inst/doc/ gets populated (introduction.Rmd at minimum).
+    if test -d inst/doc; then
+        echo "* Removing inst/openfhe/ (tarball install, inst/doc present)"
+        rm -rf inst/openfhe
+    fi
 
     OPENFHE_CFLAGS="-I${OPENFHE_INCDIR} -I${OPENFHE_INCDIR}/core -I${OPENFHE_INCDIR}/pke -I${OPENFHE_INCDIR}/binfhe -I${OPENFHE_INCDIR}/cereal"
     OPENFHE_LIBS="-L${OPENFHE_INSTALL_DIR}/lib -lOPENFHEpke -lOPENFHEbinfhe -lOPENFHEcore"

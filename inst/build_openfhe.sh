@@ -70,7 +70,14 @@ fi
 export CC=`"${R_HOME}/bin/R" CMD config CC`
 export CXX="${CXX17} ${CXX17STD}"
 export CFLAGS
-export CXXFLAGS="${CXX17FLAGS} ${CXX17PICFLAGS} ${OPENFHE_OMP_CXXFLAGS}"
+# -DOPENFHE_R_BUILD switches OpenFHE's logging path (see
+# src/core/include/utils/openfhe_log.h on the r_pkg branch) from
+# std::cerr / std::cout to REprintf / Rprintf. Required so the
+# compiled static archives contain NO stdout/stderr symbols,
+# per R CMD check's "checking compiled code" rule (Writing R
+# Extensions §1.1.3.1 step 16).
+R_INCLUDE=`"${R_HOME}/bin/R" CMD config --cppflags`
+export CXXFLAGS="${CXX17FLAGS} ${CXX17PICFLAGS} ${OPENFHE_OMP_CXXFLAGS} -DOPENFHE_R_BUILD ${R_INCLUDE}"
 export LDFLAGS
 
 R_OPENFHE_PKG_HOME=`pwd`
@@ -149,6 +156,21 @@ cd ${OPENFHE_BUILD_DIR}
 
 eval ${CMAKE_EXE} .. ${COMMON_CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 1
 
+# Normalise line endings on CMake-generated Makefiles when running
+# under MSYS/MinGW/rtools on Windows. Without this, R CMD check's
+# "checking line endings in Makefiles" step flags them as WARNING
+# (Writing R Extensions §1.1.3.1 step 16), which the CI workflow's
+# error-on: "warning" setting treats as a build failure. No-op on
+# macOS/Linux where ${OSTYPE}/${MSYSTEM} are empty.
+if test -n "${MSYSTEM}" || test "${OS}" = "Windows_NT" \
+        || test "$(uname -o 2>/dev/null)" = "Msys" \
+        || test "$(uname -s 2>/dev/null)" = "MINGW64_NT" ; then
+    echo "* Normalising CMake-generated Makefile line endings to LF (Windows build)"
+    find ${OPENFHE_BUILD_DIR} -name 'Makefile' -type f \
+        -exec sh -c 'for f in "$@"; do tr -d "\r" < "$f" > "$f.lf" && mv "$f.lf" "$f"; done' _ {} + \
+        2>/dev/null || true
+fi
+
 # Build static library targets
 ${MAKE} OPENFHEcore_static OPENFHEpke_static OPENFHEbinfhe_static || exit 1
 
@@ -195,24 +217,6 @@ else
     echo "ERROR: config_core.h not found in build directory!"
     exit 1
 fi
-
-#
-# CRAN portability patch: R CMD check flags `#pragma clang diagnostic`
-# directives as non-portable pragmas (Writing R Extensions §1.6.4 and the
-# QC.R pragma scan). Upstream OpenFHE's serial.h and serializable.h guard
-# these with `#elif defined __clang__`, which is semantically correct C++
-# but invisible to R's static text scanner. Strip the clang-pragma lines
-# from the installed headers; the `#elif` branches become empty (valid
-# preprocessor) and the shipped source is then CRAN-portable. GCC diagnostic
-# pragmas in these files remain — R's scanner accepts them as portable.
-#
-for hdr in "${INCDIR}/core/utils/serial.h" "${INCDIR}/core/utils/serializable.h"; do
-    if test -f "${hdr}"; then
-        sed -i.bak -e '/^[[:space:]]*#pragma[[:space:]][[:space:]]*clang[[:space:]][[:space:]]*diagnostic/d' "${hdr}"
-        rm -f "${hdr}.bak"
-        echo "   stripped clang pragmas from $(basename ${hdr})"
-    fi
-done
 
 echo ">>> OpenFHE installed to ${OPENFHE_INSTALL_DIR}"
 
