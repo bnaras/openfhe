@@ -5,21 +5,7 @@ Fully Homomorphic Encryption library.
 
 ## Status
 
-**Intermediate CI-fix release against OpenFHE 1.5.**
-As of **v1.1.5-2** (2026-04-17): 917 tinytest assertions
-passing, 0 failures. Local `R CMD check --no-vignettes
---as-cran` on the vendored build path: install 168s,
-installed size **9.6 Mb** (down from 369.8 Mb at v1.1.5-1
-under the CRAN-side install path, which was shipping the
-whole CMake build tree). CI reduced to macOS-only while
-remaining CRAN-portability items are addressed on the
-`openfhe-development@r_pkg` fork: non-portable pragmas in
-`openfhe/core/utils/serial.h`, `serializable.h`, and two
-cereal headers (1 WARNING), and `std::cerr` inside
-`libOPENFHEpke.a` (1 NOTE). Windows and Ubuntu matrix rows
-reintroduce once macOS is CRAN-clean.
-
-v1.1.5-1 (2026-04-15): **Block E DONE — first R release
+As of **v1.1.5-1** (2026-04-15): **Block E DONE — first R release
 cut against OpenFHE 1.5.** 917 tinytest assertions passing,
 0 failures. Full `R CMD check --as-cran` clean at 0 ERRORs /
 0 WARNINGs / 3 NOTEs (all benign, local dev environment).

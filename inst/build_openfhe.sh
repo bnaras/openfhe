@@ -142,6 +142,22 @@ if test "$(uname -s)" = "Darwin"; then
     fi
 else
     CMAKE_PLATFORM_OPTS="-G \"Unix Makefiles\""
+
+    # MinGW-w64 GCC on Windows supports __int128 at real compile time,
+    # but CMake's check_type_size("__int128" INT128) fails under
+    # rtools45's strict CFLAGS ('-pedantic -Wstrict-prototypes -O2
+    # -Wall -std=gnu2x ...') — winbuilder logs "Check size of __int128
+    # - failed". Without HAVE_INT128, the 64-bit native backend falls
+    # through to MAX_MODULUS_SIZE=57 (basicint.h:l.54), capping CKKS
+    # first_mod_size / scaling_mod_size at 57 bits. That breaks every
+    # default CKKS context (first_mod_size defaults to 60). Pre-seed
+    # the cache variables so check_type_size is skipped and config_core.h
+    # gets HAVE_INT128 defined.
+    if test -n "${MSYSTEM}" || test "${OS}" = "Windows_NT" \
+            || test "$(uname -o 2>/dev/null)" = "Msys" \
+            || test "$(uname -s 2>/dev/null)" = "MINGW64_NT" ; then
+        CMAKE_PLATFORM_OPTS="${CMAKE_PLATFORM_OPTS} -DHAVE_INT128:BOOL=TRUE -DINT128:INTERNAL=16"
+    fi
 fi
 
 # ========================================================

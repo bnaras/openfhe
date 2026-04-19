@@ -51,6 +51,11 @@ inst/openfhe/third-party/\..+
 ^inst/scripts$
 ^inst/misc$
 ^data-raw$
+# test_surface_parity.R is a dev-box harness that depends on the
+# inst/scripts/ dumpers (above) plus hard-coded /Users/naras/ paths
+# to a local openfhe-python venv and notes/upstream-defects.md. Not
+# a package regression test — must not ship.
+^inst/tinytest/test_surface_parity\.R$
 # ── Debug artifacts from local R CMD build / check ──
 ^build-check\.log$
 ^openfhe_.+\.tar\.gz$
