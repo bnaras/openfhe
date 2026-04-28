@@ -65,6 +65,80 @@ eval_sum_key_gen <- function(cc, sk) {
   invisible(NULL)
 }
 
+#' Generate relinearisation (eval-mult) keys for a secret key
+#'
+#' Standalone wrapper around the
+#' `CryptoContext::EvalMultKeyGen(privateKey)` C++ method.
+#' Populates the `CryptoContext`'s internal eval-mult registry
+#' (keyed by the secret key's tag) so that ciphertext ×
+#' ciphertext multiplication can be relinearised.
+#'
+#' [key_gen()] folds this into its `eval_mult = TRUE` branch as
+#' a convenience for fresh keypairs. The standalone wrapper is
+#' the right entry point when the secret key already exists —
+#' for example in any threshold or multi-party flow that holds
+#' a secret-key share but did not generate it through
+#' `key_gen()`.
+#'
+#' @param cc A `CryptoContext`.
+#' @param sk A `PrivateKey` whose tag will be used to key the
+#'   generated eval-mult key in the cc's internal registry.
+#' @return `NULL`, invisibly.
+#' @export
+eval_mult_key_gen <- function(cc, sk) {
+  CryptoContext__EvalMultKeyGen(get_ptr(cc), get_ptr(sk))
+  invisible(NULL)
+}
+
+#' Generate rotation keys for a secret key
+#'
+#' Standalone wrapper around the
+#' `CryptoContext::EvalRotateKeyGen(privateKey, indexList)` C++
+#' method. Populates the `CryptoContext`'s internal automorphism
+#' key registry for the supplied rotation indices so that
+#' [eval_rotate()] can consume them.
+#'
+#' [key_gen()] folds this into its `rotations = ...` argument as
+#' a convenience for fresh keypairs. The standalone wrapper is
+#' the right entry point when the secret key already exists —
+#' for example as the lead-party rotation-key generation step in
+#' a multi-party rotation protocol, where subsequent parties
+#' contribute via [multi_eval_at_index_key_gen()].
+#'
+#' @param cc A `CryptoContext`.
+#' @param sk A `PrivateKey` whose tag will be used to key the
+#'   generated rotation keys in the cc's internal registry.
+#' @param index_list Integer vector of rotation indices.
+#' @return `NULL`, invisibly.
+#' @export
+eval_rotate_key_gen <- function(cc, sk, index_list) {
+  CryptoContext__EvalRotateKeyGen(get_ptr(cc), get_ptr(sk),
+                                  as.integer(index_list))
+  invisible(NULL)
+}
+
+#' Generate at-index (rotation) keys for a secret key
+#'
+#' Standalone wrapper around the
+#' `CryptoContext::EvalAtIndexKeyGen(privateKey, indexList)` C++
+#' method. Functionally identical to [eval_rotate_key_gen()]
+#' (the C++ `EvalRotateKeyGen` is a thin inline wrapper around
+#' `EvalAtIndexKeyGen`) and provided for surface parity with the
+#' C++ header and openfhe-python, both of which bind the two
+#' names separately.
+#'
+#' @param cc A `CryptoContext`.
+#' @param sk A `PrivateKey` whose tag will be used to key the
+#'   generated rotation keys in the cc's internal registry.
+#' @param index_list Integer vector of rotation indices.
+#' @return `NULL`, invisibly.
+#' @export
+eval_at_index_key_gen <- function(cc, sk, index_list) {
+  CryptoContext__EvalAtIndexKeyGen(get_ptr(cc), get_ptr(sk),
+                                   as.integer(index_list))
+  invisible(NULL)
+}
+
 # ── Multi-eval-key generators ───────────────────────────
 
 #' Generate a joint automorphism-key share for multi-party rotation

@@ -220,6 +220,14 @@ extern "C" SEXP _openfhe_CryptoContext__EvalRotateKeyGen(SEXP cc_xp, SEXP sk_xp,
   END_CPP11
 }
 // pke_bindings.cpp
+void CryptoContext__EvalAtIndexKeyGen(SEXP cc_xp, SEXP sk_xp, integers indices);
+extern "C" SEXP _openfhe_CryptoContext__EvalAtIndexKeyGen(SEXP cc_xp, SEXP sk_xp, SEXP indices) {
+  BEGIN_CPP11
+    CryptoContext__EvalAtIndexKeyGen(cpp11::as_cpp<cpp11::decay_t<SEXP>>(cc_xp), cpp11::as_cpp<cpp11::decay_t<SEXP>>(sk_xp), cpp11::as_cpp<cpp11::decay_t<integers>>(indices));
+    return R_NilValue;
+  END_CPP11
+}
+// pke_bindings.cpp
 SEXP CryptoContext__MakePackedPlaintext(SEXP cc_xp, integers values, int noise_scale_deg, int level);
 extern "C" SEXP _openfhe_CryptoContext__MakePackedPlaintext(SEXP cc_xp, SEXP values, SEXP noise_scale_deg, SEXP level) {
   BEGIN_CPP11
@@ -3037,6 +3045,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_openfhe_CryptoContext__Enable_Mask",                     (DL_FUNC) &_openfhe_CryptoContext__Enable_Mask,                     2},
     {"_openfhe_CryptoContext__Encrypt_PrivateKey",              (DL_FUNC) &_openfhe_CryptoContext__Encrypt_PrivateKey,              3},
     {"_openfhe_CryptoContext__Encrypt_PublicKey",               (DL_FUNC) &_openfhe_CryptoContext__Encrypt_PublicKey,               3},
+    {"_openfhe_CryptoContext__EvalAtIndexKeyGen",               (DL_FUNC) &_openfhe_CryptoContext__EvalAtIndexKeyGen,               3},
     {"_openfhe_CryptoContext__EvalAutomorphismKeyGen",          (DL_FUNC) &_openfhe_CryptoContext__EvalAutomorphismKeyGen,          3},
     {"_openfhe_CryptoContext__EvalBootstrap",                   (DL_FUNC) &_openfhe_CryptoContext__EvalBootstrap,                   3},
     {"_openfhe_CryptoContext__EvalBootstrapKeyGen",             (DL_FUNC) &_openfhe_CryptoContext__EvalBootstrapKeyGen,             3},

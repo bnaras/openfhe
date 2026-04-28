@@ -132,6 +132,21 @@ void CryptoContext__EvalRotateKeyGen(SEXP cc_xp, SEXP sk_xp, integers indices) {
   (*cc)->EvalRotateKeyGen(*sk, idx_vec);
 }
 
+// EvalAtIndexKeyGen is the underlying primitive that
+// EvalRotateKeyGen forwards to verbatim (see cryptocontext.h
+// line 2463). Both names are kept for surface parity with the
+// C++ header and openfhe-python, which binds them separately.
+[[cpp11::register]]
+void CryptoContext__EvalAtIndexKeyGen(SEXP cc_xp, SEXP sk_xp, integers indices) {
+  external_pointer<CryptoContext<DCRTPoly>> cc(cc_xp);
+  external_pointer<PrivateKey<DCRTPoly>> sk(sk_xp);
+  std::vector<int32_t> idx_vec;
+  for (R_xlen_t i = 0; i < indices.size(); i++) {
+    idx_vec.push_back(indices[i]);
+  }
+  (*cc)->EvalAtIndexKeyGen(*sk, idx_vec);
+}
+
 // ── Plaintext ───────────────────────────────────────────
 
 [[cpp11::register]]

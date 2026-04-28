@@ -116,6 +116,10 @@ CryptoContext__EvalRotateKeyGen <- function(cc_xp, sk_xp, indices) {
   invisible(.Call(`_openfhe_CryptoContext__EvalRotateKeyGen`, cc_xp, sk_xp, indices))
 }
 
+CryptoContext__EvalAtIndexKeyGen <- function(cc_xp, sk_xp, indices) {
+  invisible(.Call(`_openfhe_CryptoContext__EvalAtIndexKeyGen`, cc_xp, sk_xp, indices))
+}
+
 CryptoContext__MakePackedPlaintext <- function(cc_xp, values, noise_scale_deg, level) {
   .Call(`_openfhe_CryptoContext__MakePackedPlaintext`, cc_xp, values, noise_scale_deg, level)
 }
