@@ -38,6 +38,7 @@ inst/openfhe/third-party/\..+
 ^inst/openfhe/CHANGELOG\.md$
 ^inst/openfhe/LICENSE$
 ^inst/openfhe/logo\.png$
+^man/figures/logo_v0_backup\.png$
 ^inst/openfhe/CPPLINT\.cfg$
 ^inst/openfhe/Makefile$
 # ── pkgdown / docs / github ──
