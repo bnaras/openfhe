@@ -31,6 +31,10 @@ method(eval_sub, list(Ciphertext, Ciphertext)) <- function(x, y) {
   Ciphertext(ptr = EvalSub__ct_ct(x@ptr, y@ptr))
 }
 
+method(eval_sub, list(Ciphertext, Plaintext)) <- function(x, y) {
+  Ciphertext(ptr = EvalSub__ct_pt(x@ptr, y@ptr))
+}
+
 method(eval_sub, list(Ciphertext, S7::class_double)) <- function(x, y) {
   Ciphertext(ptr = EvalSub__ct_scalar(x@ptr, y))
 }
@@ -50,6 +54,14 @@ method(eval_sub, list(S7::class_integer, Ciphertext)) <- function(x, y) {
 # ── eval_mult ────────────────────────────────────────────
 method(eval_mult, list(Ciphertext, Ciphertext)) <- function(x, y) {
   Ciphertext(ptr = EvalMult__ct_ct(x@ptr, y@ptr))
+}
+
+method(eval_mult, list(Ciphertext, Plaintext)) <- function(x, y) {
+  Ciphertext(ptr = EvalMult__ct_pt(x@ptr, y@ptr))
+}
+
+method(eval_mult, list(Plaintext, Ciphertext)) <- function(x, y) {
+  Ciphertext(ptr = EvalMult__ct_pt(y@ptr, x@ptr))
 }
 
 method(eval_mult, list(Ciphertext, S7::class_double)) <- function(x, y) {

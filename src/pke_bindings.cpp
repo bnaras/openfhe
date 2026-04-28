@@ -304,6 +304,17 @@ SEXP EvalSub__ct_int(SEXP ct_xp, int scalar) {
     new Ciphertext<DCRTPoly>(result));
 }
 
+// ct - pt
+[[cpp11::register]]
+SEXP EvalSub__ct_pt(SEXP ct_xp, SEXP pt_xp) {
+  external_pointer<Ciphertext<DCRTPoly>> ct(ct_xp);
+  external_pointer<Plaintext> pt(pt_xp);
+  auto cc = (*ct)->GetCryptoContext();
+  auto result = cc->EvalSub(*ct, *pt);
+  return external_pointer<Ciphertext<DCRTPoly>>(
+    new Ciphertext<DCRTPoly>(result));
+}
+
 // ct * ct
 [[cpp11::register]]
 SEXP EvalMult__ct_ct(SEXP ct1_xp, SEXP ct2_xp) {
@@ -321,6 +332,17 @@ SEXP EvalMult__ct_scalar(SEXP ct_xp, double scalar) {
   external_pointer<Ciphertext<DCRTPoly>> ct(ct_xp);
   auto cc = (*ct)->GetCryptoContext();
   auto result = cc->EvalMult(*ct, scalar);
+  return external_pointer<Ciphertext<DCRTPoly>>(
+    new Ciphertext<DCRTPoly>(result));
+}
+
+// ct * pt
+[[cpp11::register]]
+SEXP EvalMult__ct_pt(SEXP ct_xp, SEXP pt_xp) {
+  external_pointer<Ciphertext<DCRTPoly>> ct(ct_xp);
+  external_pointer<Plaintext> pt(pt_xp);
+  auto cc = (*ct)->GetCryptoContext();
+  auto result = cc->EvalMult(*ct, *pt);
   return external_pointer<Ciphertext<DCRTPoly>>(
     new Ciphertext<DCRTPoly>(result));
 }

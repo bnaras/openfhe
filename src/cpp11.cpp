@@ -327,6 +327,13 @@ extern "C" SEXP _openfhe_EvalSub__ct_int(SEXP ct_xp, SEXP scalar) {
   END_CPP11
 }
 // pke_bindings.cpp
+SEXP EvalSub__ct_pt(SEXP ct_xp, SEXP pt_xp);
+extern "C" SEXP _openfhe_EvalSub__ct_pt(SEXP ct_xp, SEXP pt_xp) {
+  BEGIN_CPP11
+    return cpp11::as_sexp(EvalSub__ct_pt(cpp11::as_cpp<cpp11::decay_t<SEXP>>(ct_xp), cpp11::as_cpp<cpp11::decay_t<SEXP>>(pt_xp)));
+  END_CPP11
+}
+// pke_bindings.cpp
 SEXP EvalMult__ct_ct(SEXP ct1_xp, SEXP ct2_xp);
 extern "C" SEXP _openfhe_EvalMult__ct_ct(SEXP ct1_xp, SEXP ct2_xp) {
   BEGIN_CPP11
@@ -338,6 +345,13 @@ SEXP EvalMult__ct_scalar(SEXP ct_xp, double scalar);
 extern "C" SEXP _openfhe_EvalMult__ct_scalar(SEXP ct_xp, SEXP scalar) {
   BEGIN_CPP11
     return cpp11::as_sexp(EvalMult__ct_scalar(cpp11::as_cpp<cpp11::decay_t<SEXP>>(ct_xp), cpp11::as_cpp<cpp11::decay_t<double>>(scalar)));
+  END_CPP11
+}
+// pke_bindings.cpp
+SEXP EvalMult__ct_pt(SEXP ct_xp, SEXP pt_xp);
+extern "C" SEXP _openfhe_EvalMult__ct_pt(SEXP ct_xp, SEXP pt_xp) {
+  BEGIN_CPP11
+    return cpp11::as_sexp(EvalMult__ct_pt(cpp11::as_cpp<cpp11::decay_t<SEXP>>(ct_xp), cpp11::as_cpp<cpp11::decay_t<SEXP>>(pt_xp)));
   END_CPP11
 }
 // pke_bindings.cpp
@@ -3126,6 +3140,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_openfhe_EvalMultNoRelin__ct_ct",                         (DL_FUNC) &_openfhe_EvalMultNoRelin__ct_ct,                         2},
     {"_openfhe_EvalMult__ct_ct",                                (DL_FUNC) &_openfhe_EvalMult__ct_ct,                                2},
     {"_openfhe_EvalMult__ct_int",                               (DL_FUNC) &_openfhe_EvalMult__ct_int,                               2},
+    {"_openfhe_EvalMult__ct_pt",                                (DL_FUNC) &_openfhe_EvalMult__ct_pt,                                2},
     {"_openfhe_EvalMult__ct_scalar",                            (DL_FUNC) &_openfhe_EvalMult__ct_scalar,                            2},
     {"_openfhe_EvalNegate",                                     (DL_FUNC) &_openfhe_EvalNegate,                                     1},
     {"_openfhe_EvalNegateInPlace__ct",                          (DL_FUNC) &_openfhe_EvalNegateInPlace__ct,                          1},
@@ -3142,6 +3157,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_openfhe_EvalSubMutable__ct_ct",                          (DL_FUNC) &_openfhe_EvalSubMutable__ct_ct,                          2},
     {"_openfhe_EvalSub__ct_ct",                                 (DL_FUNC) &_openfhe_EvalSub__ct_ct,                                 2},
     {"_openfhe_EvalSub__ct_int",                                (DL_FUNC) &_openfhe_EvalSub__ct_int,                                2},
+    {"_openfhe_EvalSub__ct_pt",                                 (DL_FUNC) &_openfhe_EvalSub__ct_pt,                                 2},
     {"_openfhe_EvalSub__ct_scalar",                             (DL_FUNC) &_openfhe_EvalSub__ct_scalar,                             2},
     {"_openfhe_EvalSum",                                        (DL_FUNC) &_openfhe_EvalSum,                                        2},
     {"_openfhe_FHECKKSRNS__GetBootstrapDepth",                  (DL_FUNC) &_openfhe_FHECKKSRNS__GetBootstrapDepth,                  2},

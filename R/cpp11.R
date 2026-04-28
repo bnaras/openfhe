@@ -176,12 +176,20 @@ EvalSub__ct_int <- function(ct_xp, scalar) {
   .Call(`_openfhe_EvalSub__ct_int`, ct_xp, scalar)
 }
 
+EvalSub__ct_pt <- function(ct_xp, pt_xp) {
+  .Call(`_openfhe_EvalSub__ct_pt`, ct_xp, pt_xp)
+}
+
 EvalMult__ct_ct <- function(ct1_xp, ct2_xp) {
   .Call(`_openfhe_EvalMult__ct_ct`, ct1_xp, ct2_xp)
 }
 
 EvalMult__ct_scalar <- function(ct_xp, scalar) {
   .Call(`_openfhe_EvalMult__ct_scalar`, ct_xp, scalar)
+}
+
+EvalMult__ct_pt <- function(ct_xp, pt_xp) {
+  .Call(`_openfhe_EvalMult__ct_pt`, ct_xp, pt_xp)
 }
 
 EvalMult__ct_int <- function(ct_xp, scalar) {
