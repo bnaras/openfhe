@@ -8,7 +8,7 @@
 ## `src/pke_ccparams_getters.cpp`.
 ##
 ## Getter surface is uniform across schemes: per discovery D013 the
-## derived-class CCParams<T> specialisations override setters (not
+## derived-class CCParams<T> specializations override setters (not
 ## getters) with DISABLED_FOR_XXX throwing bodies, so no getter
 ## throws on any scheme. If a parameter is disabled upstream for a
 ## particular scheme, its getter on that scheme returns the default
@@ -112,7 +112,7 @@ get_standard_deviation <- new_generic("get_standard_deviation", "params")
 get_secret_key_dist <- new_generic("get_secret_key_dist", "params")
 
 #' @describeIn ccparams_getters `parity-deferred:` maximum
-#'   relinearisation secret-key degree.
+#'   relinearization secret-key degree.
 #' @export
 get_max_relin_sk_deg <- new_generic("get_max_relin_sk_deg", "params")
 

@@ -59,7 +59,7 @@ all_fns <- ls(envir = ns, all.names = TRUE)
 ## DLL trampolines (`_openfhe_<lowercase>`) are not the cpp11
 ## binding wrappers — they are the C-level registration symbols
 ## that the wrapper functions trampoline through. Filter them
-## out so canonicalisation doesn't see them.
+## out so canonicalization doesn't see them.
 all_fns <- all_fns[!startsWith(all_fns, "_")]
 key_gen_bindings <- grep("KeyGen(__|$)", all_fns, value = TRUE)
 

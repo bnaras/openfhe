@@ -2,7 +2,7 @@
 % Please edit documentation in R/eval-key-map.R
 \name{eval_mult_key_gen}
 \alias{eval_mult_key_gen}
-\title{Generate relinearisation (eval-mult) keys for a secret key}
+\title{Generate relinearization (eval-mult) keys for a secret key}
 \usage{
 eval_mult_key_gen(cc, sk)
 }
@@ -20,7 +20,7 @@ Standalone wrapper around the
 \code{CryptoContext::EvalMultKeyGen(privateKey)} C++ method.
 Populates the \code{CryptoContext}'s internal eval-mult registry
 (keyed by the secret key's tag) so that ciphertext ×
-ciphertext multiplication can be relinearised.
+ciphertext multiplication can be relinearized.
 }
 \details{
 \code{\link[=key_gen]{key_gen()}} folds this into its \code{eval_mult = TRUE} branch as

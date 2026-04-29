@@ -12,7 +12,7 @@
 ## the homomorpheR threshold-similarity vignette needs ct × pt
 ## directly — encoding the diagonals as ciphertexts would
 ## require a fresh encryption per diagonal per query and would
-## need ciphertext × ciphertext relinearisation, both of which
+## need ciphertext × ciphertext relinearization, both of which
 ## are wasteful when the diagonals are public-form
 ## plaintext-encoded site-private matrix entries. This test
 ## pins the new ct × pt and ct - pt out-of-place bindings.

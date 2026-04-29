@@ -11,6 +11,6 @@ FastRotationPrecomputation(ptr = NULL)
 }
 \description{
 Returned by \code{eval_fast_rotation_precompute()} and consumed by
-\code{eval_fast_rotation()}. Hoisting amortises the per-rotation
+\code{eval_fast_rotation()}. Hoisting amortizes the per-rotation
 decomposition over many rotations of the same source ciphertext.
 }

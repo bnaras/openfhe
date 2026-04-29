@@ -1,6 +1,6 @@
 ## OPENFHE PYTHON SOURCE: src/lib/bindings.cpp (CCParams class)
 ##
-## Per discovery D013, each CCParams<T> specialisation disables a
+## Per discovery D013, each CCParams<T> specialization disables a
 ## subset of the common Params-base setters via DISABLED_FOR_<SCHEME>
 ## throwing overrides. The R constructors below expose **only** the
 ## enabled subset per scheme:
@@ -20,7 +20,7 @@
 #'
 #' Constructor for the BFV scheme's `CCParams` surface. Every argument
 #' maps 1:1 to an upstream `CCParams<CryptoContextBFVRNS>::Set*` method
-#' whose override is *not* disabled in the BFV specialisation. The 13
+#' whose override is *not* disabled in the BFV specialization. The 13
 #' setters that BFV explicitly disables (`SetScalingTechnique`,
 #' `SetFirstModSize`, `SetPRENumHops`, `SetExecutionMode`, …) are not
 #' exposed here; see discovery D013.
@@ -106,7 +106,7 @@
 #'   Default upstream is `HPSPOVERQLEVELED`; override only if you
 #'   are benchmarking multiplication-path variants.
 #' @param max_relin_sk_deg `parity-deferred:` maximum degree of the
-#'   secret key that can be relinearised. Upstream default is 2.
+#'   secret key that can be relinearized. Upstream default is 2.
 #'   No current vignette or Python example exercises this; the
 #'   cpp11 binding is in place so a later release can promote it
 #'   without a recompile.

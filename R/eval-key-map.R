@@ -65,13 +65,13 @@ eval_sum_key_gen <- function(cc, sk) {
   invisible(NULL)
 }
 
-#' Generate relinearisation (eval-mult) keys for a secret key
+#' Generate relinearization (eval-mult) keys for a secret key
 #'
 #' Standalone wrapper around the
 #' `CryptoContext::EvalMultKeyGen(privateKey)` C++ method.
 #' Populates the `CryptoContext`'s internal eval-mult registry
 #' (keyed by the secret key's tag) so that ciphertext ×
-#' ciphertext multiplication can be relinearised.
+#' ciphertext multiplication can be relinearized.
 #'
 #' [key_gen()] folds this into its `eval_mult = TRUE` branch as
 #' a convenience for fresh keypairs. The standalone wrapper is

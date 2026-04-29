@@ -26,7 +26,7 @@ kp <- key_gen(cc)        # plain KeyGen, no folded eval-mult / rotations
 
 ## After the standalone call, ciphertext × ciphertext
 ## multiplication should succeed. Without it, EvalMult would
-## throw because the relinearisation key is missing.
+## throw because the relinearization key is missing.
 eval_mult_key_gen(cc, kp@secret)
 
 x <- c(1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5)

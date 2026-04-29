@@ -131,7 +131,7 @@ method(rescale, Ciphertext) <- function(ct) {
 #' Precomputed digit decomposition for hoisted rotations
 #'
 #' Returned by `eval_fast_rotation_precompute()` and consumed by
-#' `eval_fast_rotation()`. Hoisting amortises the per-rotation
+#' `eval_fast_rotation()`. Hoisting amortizes the per-rotation
 #' decomposition over many rotations of the same source ciphertext.
 #'
 #' @param ptr External pointer (internal use)

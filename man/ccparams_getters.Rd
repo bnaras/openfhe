@@ -167,7 +167,7 @@ of the Gaussian error distribution.
 distribution (see \code{SecretKeyDist}).
 
 \item \code{get_max_relin_sk_deg()}: \verb{parity-deferred:} maximum
-relinearisation secret-key degree.
+relinearization secret-key degree.
 
 \item \code{get_pre_mode()}: \verb{parity-deferred:} proxy
 re-encryption mode (see \code{PREMode}).

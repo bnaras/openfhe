@@ -122,7 +122,7 @@ Default upstream is \code{HPSPOVERQLEVELED}; override only if you
 are benchmarking multiplication-path variants.}
 
 \item{max_relin_sk_deg}{\verb{parity-deferred:} maximum degree of the
-secret key that can be relinearised. Upstream default is 2.
+secret key that can be relinearized. Upstream default is 2.
 No current vignette or Python example exercises this; the
 cpp11 binding is in place so a later release can promote it
 without a recompile.}
@@ -149,7 +149,7 @@ A \code{BFVParams} S7 object.
 \description{
 Constructor for the BFV scheme's \code{CCParams} surface. Every argument
 maps 1:1 to an upstream \verb{CCParams<CryptoContextBFVRNS>::Set*} method
-whose override is \emph{not} disabled in the BFV specialisation. The 13
+whose override is \emph{not} disabled in the BFV specialization. The 13
 setters that BFV explicitly disables (\code{SetScalingTechnique},
 \code{SetFirstModSize}, \code{SetPRENumHops}, \code{SetExecutionMode}, …) are not
 exposed here; see discovery D013.

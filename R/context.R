@@ -19,7 +19,7 @@ CryptoContext <- new_class("CryptoContext",
 #' (`BFVParams()`, `BGVParams()`, or `CKKSParams()`). See those
 #' functions' argument lists for the valid per-scheme setter surface
 #' — each scheme accepts only the setters that are *not* disabled in
-#' its upstream `CCParams<T>` specialisation (see discovery D013).
+#' its upstream `CCParams<T>` specialization (see discovery D013).
 #' Passing an invalid scheme-specific argument produces an R-level
 #' "unused argument" error at the underlying `*Params()` call site.
 #'
